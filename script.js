@@ -1,964 +1,255 @@
+(() => {
+  "use strict";
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const STORAGE_KEY = "creatorkit_saved_prompts_v2";
+  const PLAN_KEY = "creatorkit_demo_plan_v2";
+  let currentPrompt = "";
+  let toastTimer;
 
-"use strict";
-
-const STORAGE_KEY = "creatorkit_saved_v2";
-const MAX_SAVES = 50;
-
-const form = document.getElementById("generatorForm");
-const topicInput = document.getElementById("topic");
-const platformInput = document.getElementById("platform");
-const goalInput = document.getElementById("goal");
-const formatInput = document.getElementById("format");
-const toneInput = document.getElementById("tone");
-const audienceInput = document.getElementById("audience");
-const durationInput = document.getElementById("duration");
-const extraInput = document.getElementById("extra");
-
-const promptOutput = document.getElementById("promptOutput");
-const promptWordCount = document.getElementById("promptWordCount");
-const ideasGrid = document.getElementById("ideasGrid");
-const ideasCount = document.getElementById("ideasCount");
-
-const copyPromptBtn = document.getElementById("copyPromptBtn");
-const regenerateBtn = document.getElementById("regenerateBtn");
-const copyAllBtn = document.getElementById("copyAllBtn");
-const downloadBtn = document.getElementById("downloadBtn");
-const saveBtn = document.getElementById("saveBtn");
-
-const copyStatus = document.getElementById("copyStatus");
-const ideasStatus = document.getElementById("ideasStatus");
-const savedStatus = document.getElementById("savedStatus");
-const savedList = document.getElementById("savedList");
-const savedCount = document.getElementById("savedCount");
-
-let currentIdeas = [];
-let currentPrompt = "";
-let currentBrief = null;
-
-document.getElementById("currentYear").textContent =
-  String(new Date().getFullYear());
-
-/* -------------------------------------------------------
-   1. OUTILS
-------------------------------------------------------- */
-
-function cleanText(value) {
-  return String(value ?? "").trim();
-}
-
-function normalizeTopic(value) {
-  return cleanText(value).replace(/\s+/g, " ");
-}
-
-function getBrief() {
-  return {
-    topic: normalizeTopic(topicInput.value),
-    platform: platformInput.value,
-    goal: goalInput.value,
-    format: formatInput.value,
-    tone: toneInput.value,
-    audience: audienceInput.value,
-    duration: durationInput.value,
-    extra: cleanText(extraInput.value)
-  };
-}
-
-function pluralize(count, singular, plural = singular + "s") {
-  return count + " " + (count > 1 ? plural : singular);
-}
-
-function countWords(text) {
-  const trimmed = cleanText(text);
-  return trimmed ? trimmed.split(/\s+/).length : 0;
-}
-
-function setStatus(element, message, isError = false) {
-  element.textContent = message;
-  element.style.color = isError ? "#b45669" : "";
-}
-
-function escapeHTML(value) {
-  return String(value ?? "").replace(/[&<>"']/g, (character) => {
-    const entities = {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
-    };
-
-    return entities[character];
-  });
-}
-
-function makeId() {
-  if (window.crypto && typeof window.crypto.randomUUID === "function") {
-    return window.crypto.randomUUID();
+  function toast(message) {
+    const el = $("#toast");
+    if (!el) return;
+    el.textContent = message;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
   }
-
-  return Date.now().toString(36) + Math.random().toString(36).slice(2);
-}
-
-function formatDate(timestamp) {
-  const date = new Date(timestamp);
-
-  if (Number.isNaN(date.getTime())) {
-    return "Date inconnue";
+  function getSaved() {
+    try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); return Array.isArray(value) ? value : []; }
+    catch { return []; }
   }
-
-  return new Intl.DateTimeFormat("fr-FR", {
-    dateStyle: "medium",
-    timeStyle: "short"
-  }).format(date);
-}
-
-function slugify(value) {
-  const result = cleanText(value)
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 55);
-
-  return result || "creatorkit";
-}
-
-/* -------------------------------------------------------
-   2. CONSTRUCTION DU PROMPT
-------------------------------------------------------- */
-
-function getPlatformGuidance(platform) {
-  const guidance = {
-    TikTok:
-      "Commence par une accroche immédiate, utilise des phrases orales et rythmées, privilégie un seul message central et termine par une action simple. Prévois une progression visuelle adaptée à une vidéo verticale.",
-
-    Instagram:
-      "Privilégie une accroche visuelle, un message facile à retenir et une présentation adaptée aux usages Instagram. Si le format s'y prête, suggère des éléments de texte à afficher à l'écran.",
-
-    YouTube:
-      "Construis une progression claire, une promesse compréhensible et une structure qui maintient l'intérêt. Évite les promesses exagérées et propose un titre cohérent avec le contenu.",
-
-    LinkedIn:
-      "Adopte une approche claire et professionnelle, apporte un enseignement concret et relie le sujet à une situation réelle. Favorise la crédibilité plutôt que les formules sensationnalistes."
-  };
-
-  return guidance[platform] || guidance.TikTok;
-}
-
-function getFormatInstructions(format) {
-  const instructions = {
-    "Script vidéo":
-      "Rédige un script avec une accroche, des séquences distinctes, les paroles à prononcer, des suggestions de visuels ou de plans, puis une conclusion avec un appel à l'action.",
-
-    "Liste d'idées":
-      "Propose une liste numérotée d'idées différentes. Pour chaque idée, donne un titre, un angle précis, une accroche et une courte explication.",
-
-    "Tutoriel":
-      "Organise le contenu en étapes progressives. Pour chaque étape, précise ce qu'il faut faire et donne un exemple concret. Termine par un récapitulatif.",
-
-    "Storytelling":
-      "Construis un récit avec une situation de départ, un problème, un déclic et une conclusion utile. N'invente pas d'expérience personnelle réelle attribuée au créateur.",
-
-    "Carrousel":
-      "Propose un plan diapositive par diapositive. Chaque diapositive doit avoir un titre court, un message principal et, si utile, une suggestion visuelle.",
-
-    "Publication écrite":
-      "Rédige une publication structurée avec une première phrase accrocheuse, un développement facile à lire et une conclusion cohérente avec l'objectif."
-  };
-
-  return instructions[format] || instructions["Script vidéo"];
-}
-
-function getToneInstructions(tone) {
-  const instructions = {
-    Dynamique:
-      "Utilise un rythme énergique, des formulations directes et des phrases vivantes, sans en faire trop.",
-
-    Pédagogique:
-      "Explique les idées avec clarté, donne des exemples et rends les notions faciles à comprendre.",
-
-    Humoristique:
-      "Utilise un humour accessible et pertinent, sans moquerie blessante ni blague forcée.",
-
-    Professionnel:
-      "Adopte un ton précis, crédible et structuré, avec un vocabulaire adapté au domaine.",
-
-    Inspirant:
-      "Mets en avant les possibilités de progression et donne envie d'agir sans promettre de résultats garantis.",
-
-    Décontracté:
-      "Utilise un langage naturel, accessible et conversationnel, comme dans une discussion."
-  };
-
-  return instructions[tone] || instructions.Dynamique;
-}
-
-function getAudienceInstructions(audience) {
-  const instructions = {
-    Débutant:
-      "Pars des bases, définis les termes techniques et évite de supposer que le public possède déjà des connaissances.",
-
-    Intermédiaire:
-      "Considère que le public connaît déjà les bases. Propose des méthodes applicables, des exemples précis et quelques astuces moins évidentes.",
-
-    Avancé:
-      "Privilégie les nuances, les stratégies approfondies, les compromis et les exemples techniques pertinents. Évite les explications trop élémentaires.",
-
-    "Grand public":
-      "Privilégie les explications universellement accessibles, les exemples de la vie courante et les formulations simples."
-  };
-
-  return instructions[audience] || instructions.Intermédiaire;
-}
-
-function getGoalInstructions(goal) {
-  const instructions = {
-    "Trouver des idées originales":
-      "Cherche des angles spécifiques et variés. Évite les idées génériques et reformule les sujets classiques avec une perspective nouvelle.",
-
-    "Éduquer mon audience":
-      "Apporte un apprentissage clair, une méthode pratique et un exemple que le public peut essayer.",
-
-    "Divertir mon audience":
-      "Privilégie une situation reconnaissable, un contraste surprenant ou une idée amusante qui reste pertinente par rapport au sujet.",
-
-    "Développer ma communauté":
-      "Propose un contenu qui aide les personnes visées à se reconnaître, à partager leurs expériences et à participer à une conversation.",
-
-    "Présenter un produit ou service":
-      "Montre le problème auquel le produit ou service répond, son utilité concrète et ses limites éventuelles. Évite les affirmations invérifiables.",
-
-    "Augmenter les interactions":
-      "Propose une question ou une invitation à réagir qui soit directement liée au sujet et qui ne pousse pas artificiellement à l'engagement."
-  };
-
-  return instructions[goal] || instructions["Trouver des idées originales"];
-}
-
-function buildPrompt(brief) {
-  const parts = [
-    "Tu es un assistant de conception de contenu pour créateurs. Aide-moi à préparer un contenu original et exploitable.",
-    "",
-    "MON BRIEF",
-    "- Sujet : " + brief.topic,
-    "- Plateforme : " + brief.platform,
-    "- Objectif : " + brief.goal,
-    "- Format : " + brief.format,
-    "- Ton : " + brief.tone,
-    "- Public visé : " + brief.audience,
-    "- Durée ou longueur : " + brief.duration,
-    "",
-    "CONSIGNES PERSONNALISÉES",
-    "1. " + getGoalInstructions(brief.goal),
-    "2. " + getFormatInstructions(brief.format),
-    "3. " + getToneInstructions(brief.tone),
-    "4. " + getAudienceInstructions(brief.audience),
-    "5. " + getPlatformGuidance(brief.platform)
-  ];
-
-  if (brief.extra) {
-    parts.push(
-      "",
-      "MES PRÉCISIONS SUPPLÉMENTAIRES",
-      brief.extra
-    );
+  function setSaved(items) { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+  function escapeHTML(value) {
+    return String(value).replace(/[&<>"']/g, ch => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[ch]));
   }
-
-  parts.push(
-    "",
-    "RÉSULTAT ATTENDU",
-    "Présente une proposition concrète, spécifique au sujet et adaptée aux contraintes ci-dessus. Évite les répétitions, les banalités, les informations inventées et les promesses de résultats garantis.",
-    "Si une information essentielle manque, signale brièvement l'hypothèse retenue au lieu de la présenter comme un fait.",
-    "Organise la réponse pour que je puisse facilement réutiliser ou modifier le contenu."
-  );
-
-  return parts.join("\n");
-}
-
-/* -------------------------------------------------------
-   3. GÉNÉRATION LOCALE DES IDÉES
-   Ces modèles ne font aucun appel à une IA externe.
-------------------------------------------------------- */
-
-function buildIdeas(brief) {
-  const topic = brief.topic;
-  const platform = brief.platform;
-  const format = brief.format;
-
-  const ideaTemplates = [
-    {
-      title: "L'erreur que beaucoup de créateurs commettent",
-      hook: "Tu fais peut-être cette erreur sans t'en rendre compte.",
-      description:
-        "Présente une erreur fréquente liée à « " + topic +
-        " », explique pourquoi elle arrive et montre une façon concrète de l'éviter.",
-      cta: "Demande au public quelle difficulté il rencontre le plus souvent."
-    },
-    {
-      title: "3 façons de faire autrement",
-      hook: "Et si tu essayais ces trois approches ?",
-      description:
-        "Propose trois méthodes différentes autour de « " + topic +
-        " ». Donne un exemple pour chacune et précise dans quel cas elle peut être utile.",
-      cta: "Invite les personnes à choisir l'approche qu'elles veulent tester."
-    },
-    {
-      title: "Avant et après : une méthode améliorée",
-      hook: "Voici comment rendre cette méthode plus efficace.",
-      description:
-        "Compare une approche classique de « " + topic +
-        " » à une version mieux structurée. Explique les changements et les compromis.",
-      cta: "Propose au public de partager sa propre méthode."
-    },
-    {
-      title: "Le mini-défi pratique",
-      hook: "Teste ça lors de ta prochaine session.",
-      description:
-        "Crée un petit exercice lié à « " + topic +
-        " » que le public peut réaliser rapidement, avec une consigne claire et un résultat à observer.",
-      cta: "Invite le public à essayer le défi et à raconter son expérience."
-    },
-    {
-      title: "Une idée reçue à remettre en question",
-      hook: "On entend souvent ça… mais est-ce toujours vrai ?",
-      description:
-        "Choisis une idée reçue liée à « " + topic +
-        " ». Présente ce qui peut être vrai, ce qui dépend du contexte et un exemple nuancé.",
-      cta: "Pose une question ouverte pour recueillir différents points de vue."
-    },
-    {
-      title: "La méthode en étapes simples",
-      hook: "Voici une méthode claire pour t'y mettre.",
-      description:
-        "Décompose « " + topic +
-        " » en trois étapes progressives. Pour chaque étape, donne une action réalisable et un exemple.",
-      cta: "Invite le public à enregistrer la méthode pour la retrouver."
-    },
-    {
-      title: "La question que l'on oublie de poser",
-      hook: "Avant de commencer, pose-toi cette question.",
-      description:
-        "Pars d'une question souvent négligée autour de « " + topic +
-        " ». Explique pourquoi elle compte et montre comment la réponse peut modifier la démarche.",
-      cta: "Demande au public quelle question il ajouterait."
-    }
-  ];
-
-  return ideaTemplates.map((template, index) => {
-    const hook = adaptHook(template.hook, brief);
-    const description = adaptDescription(template.description, brief);
-    const cta = adaptCTA(template.cta, brief);
-
+  function readForm() {
+    const subject = $("#subject")?.value.trim() || "";
     return {
-      id: makeId(),
-      number: index + 1,
-      title: template.title,
-      hook,
-      description,
-      cta,
-      platform,
-      format,
-      goal: brief.goal,
-      tone: brief.tone,
-      audience: brief.audience,
-      topic
+      subject,
+      platform: $("#platform")?.value || "TikTok",
+      goal: $("#goal")?.value || "Gagner en visibilité",
+      format: $("#format")?.value || "Vidéo courte",
+      tone: $("#tone")?.value || "Naturel et dynamique",
+      audience: $("#audience")?.value.trim() || "personnes intéressées par le sujet",
+      duration: $("#duration")?.value || "30 secondes",
+      details: $("#details")?.value.trim() || ""
     };
+  }
+  function buildPrompt(data) {
+    return `Agis comme un créateur de contenu expérimenté et un stratège éditorial.\n\nSUJET : ${data.subject}\nPLATEFORME : ${data.platform}\nOBJECTIF : ${data.goal}\nFORMAT : ${data.format}\nTON : ${data.tone}\nPUBLIC CIBLE : ${data.audience}\nDURÉE / LONGUEUR : ${data.duration}\n${data.details ? `DÉTAILS À PRENDRE EN COMPTE : ${data.details}\n` : ""}\n\nMISSION : Propose un concept original et adapté à cette plateforme. Commence par une accroche claire, structure le contenu étape par étape, utilise un langage adapté au public cible et termine par un appel à l'action naturel. Évite les clichés, les promesses exagérées et les formulations vagues.\n\nFORMAT DE RÉPONSE ATTENDU :\n1. Le concept en une phrase\n2. Trois propositions d'accroche\n3. Le contenu complet, adapté au format choisi\n4. Les indications visuelles ou de mise en scène utiles\n5. Une légende ou description adaptée à ${data.platform}\n6. Une suggestion d'appel à l'action\n7. Trois variantes pour tester différents angles\n\nSi une information essentielle manque, indique clairement ton hypothèse au lieu d'inventer des faits.`;
+  }
+  function generatePrompt(event) {
+    if (event) event.preventDefault();
+    const data = readForm();
+    if (!data.subject) { $("#subject")?.focus(); toast("Ajoute d'abord un sujet à ton prompt."); return; }
+    currentPrompt = buildPrompt(data);
+    const out = $("#promptOutput");
+    if (out) out.textContent = currentPrompt;
+    const status = $("#outputStatus");
+    if (status) status.textContent = "Prompt créé à partir de tes choix.";
+    toast("Ton prompt est prêt !");
+  }
+  function downloadText(filename, content) {
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url; link.download = filename; document.body.appendChild(link); link.click(); link.remove();
+    URL.revokeObjectURL(url);
+  }
+  async function copyText(text) {
+    if (!text) { toast("Génère d'abord un prompt."); return; }
+    try { await navigator.clipboard.writeText(text); toast("Copié dans le presse-papiers !"); }
+    catch {
+      const area = document.createElement("textarea"); area.value = text; area.style.position = "fixed"; area.style.opacity = "0";
+      document.body.appendChild(area); area.select();
+      try { document.execCommand("copy"); toast("Copié dans le presse-papiers !"); }
+      catch { toast("La copie automatique n'est pas disponible sur ce navigateur."); }
+      area.remove();
+    }
+  }
+
+  // Navigation and common footer.
+  const menuButton = $("#mobileMenu"), nav = $("#mainNav");
+  menuButton?.addEventListener("click", () => {
+    const open = nav?.classList.toggle("open");
+    menuButton.setAttribute("aria-expanded", String(Boolean(open)));
   });
-}
+  $$("[data-year]").forEach(el => el.textContent = new Date().getFullYear());
 
-function adaptHook(hook, brief) {
-  if (brief.tone === "Professionnel") {
-    return hook
-      .replace("Tu fais peut-être", "Une erreur fréquente consiste peut-être à")
-      .replace("Et si tu essayais", "Trois approches méritent d'être explorées")
-      .replace("Teste ça lors de ta prochaine session.", "Voici un exercice à tester lors de ta prochaine session.");
-  }
-
-  if (brief.tone === "Pédagogique") {
-    return hook
-      .replace("Tu fais peut-être cette erreur sans t'en rendre compte.", "Voyons comment repérer et corriger cette erreur.")
-      .replace("On entend souvent ça… mais est-ce toujours vrai ?", "Examinons cette idée reçue et ses limites.");
-  }
-
-  if (brief.tone === "Décontracté") {
-    return hook
-      .replace("Tu fais peut-être cette erreur sans t'en rendre compte.", "Petit point à vérifier dans ta méthode.")
-      .replace("Voici une méthode claire pour t'y mettre.", "On regarde une méthode simple pour commencer.");
-  }
-
-  if (brief.tone === "Humoristique") {
-    return hook
-      .replace("Tu fais peut-être cette erreur sans t'en rendre compte.", "Cette erreur s'invite parfois sans prévenir.")
-      .replace("Voici comment rendre cette méthode plus efficace.", "On va essayer de faire mieux sans compliquer les choses.");
-  }
-
-  if (brief.tone === "Inspirant") {
-    return hook
-      .replace("Tu fais peut-être cette erreur sans t'en rendre compte.", "Une petite amélioration peut changer ta façon d'avancer.")
-      .replace("Teste ça lors de ta prochaine session.", "Accorde-toi quelques minutes pour essayer cette méthode.");
-  }
-
-  return hook;
-}
-
-function adaptDescription(description, brief) {
-  let result = description;
-
-  if (brief.audience === "Débutant") {
-    result += " Définis les termes utiles et accompagne chaque étape d'un exemple simple.";
-  } else if (brief.audience === "Avancé") {
-    result += " Ajoute une nuance avancée, une limite ou un cas particulier pour enrichir l'analyse.";
-  } else if (brief.audience === "Grand public") {
-    result += " Utilise des situations courantes et évite le jargon inutile.";
-  } else {
-    result += " Va au-delà des bases avec un exemple pratique et un conseil immédiatement applicable.";
-  }
-
-  if (brief.goal === "Éduquer mon audience") {
-    result += " Mets en évidence ce que le public pourra apprendre.";
-  } else if (brief.goal === "Divertir mon audience") {
-    result += " Cherche une présentation vivante et une situation facile à reconnaître.";
-  } else if (brief.goal === "Développer ma communauté") {
-    result += " Fais le lien avec une expérience commune au public visé.";
-  } else if (brief.goal === "Présenter un produit ou service") {
-    result += " Si un produit est concerné, illustre son utilité sans inventer de caractéristiques.";
-  } else if (brief.goal === "Augmenter les interactions") {
-    result += " Intègre une question authentique qui facilite les réponses.";
-  }
-
-  return result;
-}
-
-function adaptCTA(cta, brief) {
-  if (brief.platform === "LinkedIn") {
-    return cta.replace("Invite le public", "Invite les lecteurs");
-  }
-
-  if (brief.platform === "YouTube") {
-    return cta.replace("le public", "les spectateurs");
-  }
-
-  if (brief.platform === "Instagram") {
-    return cta.replace("le public", "la communauté");
-  }
-
-  return cta;
-}
-
-/* -------------------------------------------------------
-   4. AFFICHAGE DES IDÉES
-------------------------------------------------------- */
-
-function renderIdeas() {
-  ideasGrid.innerHTML = "";
-
-  if (!currentIdeas.length) {
-    ideasGrid.innerHTML = `
-      <div class="empty-state">
-        <strong>Aucune idée pour le moment</strong>
-        <p>Complète ton sujet pour construire une nouvelle sélection.</p>
-      </div>
-    `;
-
-    ideasCount.textContent = "0 IDÉE";
-    return;
-  }
-
-  ideasCount.textContent = currentIdeas.length + " IDÉES";
-
-  currentIdeas.forEach((idea) => {
-    const card = document.createElement("article");
-    card.className = "idea-card";
-
-    card.innerHTML = `
-      <div class="idea-topline">
-        <span class="idea-number">${idea.number}</span>
-        <span class="idea-format">${escapeHTML(idea.format.toUpperCase())}</span>
-      </div>
-
-      <h3>${escapeHTML(idea.title)}</h3>
-
-      <div class="idea-hook">${escapeHTML(idea.hook)}</div>
-
-      <p class="idea-description">${escapeHTML(idea.description)}</p>
-
-      <p class="idea-cta">
-        <strong>Appel à l'action :</strong>
-        ${escapeHTML(idea.cta)}
-      </p>
-
-      <div class="idea-actions">
-        <button
-          class="button button-secondary"
-          type="button"
-          data-action="copy-idea"
-          data-id="${escapeHTML(idea.id)}"
-        >▣ Copier</button>
-
-        <button
-          class="button button-secondary"
-          type="button"
-          data-action="prompt-idea"
-          data-id="${escapeHTML(idea.id)}"
-        >Créer un prompt pour cette idée</button>
-      </div>
-    `;
-
-    ideasGrid.appendChild(card);
+  // Prompt generator.
+  $("#promptForm")?.addEventListener("submit", generatePrompt);
+  $("#copyPrompt")?.addEventListener("click", () => copyText(currentPrompt));
+  $("#downloadPrompt")?.addEventListener("click", () => {
+    if (!currentPrompt) { toast("Génère d'abord un prompt."); return; }
+    downloadText("creatorkit-prompt.txt", currentPrompt);
   });
-}
+  $("#savePrompt")?.addEventListener("click", () => {
+    if (!currentPrompt) { toast("Génère d'abord un prompt."); return; }
+    const data = readForm();
+    const items = getSaved();
+    items.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), title: data.subject, platform: data.platform, prompt: currentPrompt, createdAt: new Date().toISOString() });
+    setSaved(items.slice(0, 100));
+    const status = $("#outputStatus"); if (status) status.textContent = "Prompt enregistré dans Mes créations.";
+    toast("Ajouté à Mes créations !");
+  });
 
-function ideaToText(idea) {
-  return [
-    idea.number + ". " + idea.title,
-    "",
-    "Accroche : " + idea.hook,
-    "",
-    "Développement : " + idea.description,
-    "",
-    "Appel à l'action : " + idea.cta,
-    "",
-    "Plateforme : " + idea.platform,
-    "Format : " + idea.format
-  ].join("\n");
-}
-
-function allIdeasToText() {
-  const header = [
-    "CREATORKIT — MA BOÎTE À IDÉES",
-    "Sujet : " + (currentBrief?.topic || ""),
-    "Plateforme : " + (currentBrief?.platform || ""),
-    "Objectif : " + (currentBrief?.goal || ""),
-    "Format : " + (currentBrief?.format || ""),
-    "Ton : " + (currentBrief?.tone || ""),
-    "Public : " + (currentBrief?.audience || ""),
-    "",
-    "PROMPT PERSONNALISÉ",
-    currentPrompt,
-    "",
-    "IDÉES"
+  // Ideas: curated templates with topic/platform personalization, no external AI call.
+  const ideaTemplates = [
+    { tag: "CONSEIL", title: "3 erreurs que tout le monde fait", body: "Présente trois erreurs fréquentes autour de {topic}, puis donne une solution simple pour chacune." },
+    { tag: "COULISSES", title: "Une journée dans les coulisses", body: "Montre les étapes, les imprévus et les petits détails qu'on ne voit jamais dans {topic}." },
+    { tag: "COMPARAISON", title: "Avant de commencer / après", body: "Compare les premières impressions avec ce que tu sais aujourd'hui sur {topic}, puis partage tes apprentissages." },
+    { tag: "TUTORIEL", title: "Le guide express pour débuter", body: "Crée un mini-guide en trois étapes pour aider un débutant à faire ses premiers pas dans {topic}." },
+    { tag: "MYTHE", title: "Vrai ou faux ?", body: "Choisis une idée reçue sur {topic}, explique ce qui est vrai et nuance ce qui mérite de l'être." },
+    { tag: "STORYTELLING", title: "Ce que j'aurais aimé savoir", body: "Raconte trois choses que tu aurais aimé connaître avant de te lancer dans {topic}." },
+    { tag: "DÉFI", title: "Le défi en 7 jours", body: "Propose un petit défi de sept jours autour de {topic}, avec un objectif réaliste chaque jour." },
+    { tag: "LISTE", title: "Mes 5 indispensables", body: "Présente cinq outils, habitudes ou ressources utiles quand on s'intéresse à {topic}." },
+    { tag: "QUESTION", title: "Répondre à une question fréquente", body: "Prends une question que les débutants se posent sur {topic} et réponds-y de façon claire et concrète." }
   ];
-
-  return header.concat(
-    currentIdeas.map(ideaToText)
-  ).join("\n\n------------------------------\n\n");
-}
-
-/* -------------------------------------------------------
-   5. SAUVEGARDE LOCALE
-------------------------------------------------------- */
-
-function readSavedItems() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-
-    if (!raw) return [];
-
-    const parsed = JSON.parse(raw);
-
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.filter((item) => {
-      return item &&
-        typeof item.id === "string" &&
-        typeof item.topic === "string" &&
-        typeof item.prompt === "string" &&
-        Array.isArray(item.ideas);
-    });
-  } catch (error) {
-    console.warn("Impossible de lire les sauvegardes CreatorKit.", error);
-    return [];
+  function renderIdeas() {
+    const grid = $("#ideasGrid");
+    if (!grid) return;
+    const topic = $("#ideaTopic")?.value.trim() || "création de contenu";
+    const platform = $("#ideaPlatform")?.value || "TikTok";
+    const chosen = [...ideaTemplates].sort(() => Math.random() - .5).slice(0, 6);
+    grid.innerHTML = chosen.map((item, i) => `<article class="idea-card" style="animation-delay:${i * 55}ms"><span class="idea-number">${String(i + 1).padStart(2, "0")} / ${escapeHTML(item.tag)}</span><h3>${escapeHTML(item.title)}</h3><p>${escapeHTML(item.body.replaceAll("{topic}", topic))}</p><button class="text-button" data-idea="${escapeHTML(item.title + " — " + item.body.replaceAll("{topic}", topic) + " (plateforme : " + platform + ")")}">Utiliser cette idée →</button></article>`).join("");
+    $$("[data-idea]", grid).forEach(btn => btn.addEventListener("click", () => {
+      const idea = btn.dataset.idea || "";
+      try { sessionStorage.setItem("creatorkit_prefill_subject", idea); } catch {}
+      location.href = "generateur.html";
+    }));
   }
-}
-
-function writeSavedItems(items) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    return true;
-  } catch (error) {
-    console.error("Impossible d'enregistrer les sauvegardes.", error);
-    setStatus(
-      savedStatus,
-      "La sauvegarde a échoué. Vérifie l'espace disponible ou les réglages du navigateur.",
-      true
-    );
-    return false;
+  $("#refreshIdeas")?.addEventListener("click", renderIdeas);
+  if ($("#ideasGrid")) {
+    $$("[data-idea]", $("#ideasGrid")).forEach(btn => btn.addEventListener("click", () => {
+      try { sessionStorage.setItem("creatorkit_prefill_subject", btn.dataset.idea || ""); } catch {}
+      location.href = "generateur.html";
+    }));
   }
-}
-
-function renderSavedItems() {
-  const items = readSavedItems();
-
-  savedList.innerHTML = "";
-  savedCount.textContent =
-    items.length + (items.length > 1 ? " SAUVEGARDES" : " SAUVEGARDE");
-
-  if (!items.length) {
-    savedList.innerHTML = `
-      <div class="empty-state">
-        <strong>Ta bibliothèque est encore vide.</strong>
-        <p>Utilise le bouton « Sauvegarder » pour conserver ton prompt et tes idées sur cet appareil.</p>
-      </div>
-    `;
-    return;
+  if (document.body.dataset.page === "generator") {
+    try {
+      const prefill = sessionStorage.getItem("creatorkit_prefill_subject");
+      if (prefill && $("#subject")) { $("#subject").value = prefill; sessionStorage.removeItem("creatorkit_prefill_subject"); }
+    } catch {}
   }
 
-  items.forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "saved-card";
-
-    const summary = [
-      item.platform,
-      item.format,
-      item.tone,
-      item.audience
-    ].filter(Boolean).join(" · ");
-
-    card.innerHTML = `
-      <div class="saved-card-header">
-        <div>
-          <h3>${escapeHTML(item.topic)}</h3>
-          <span class="saved-date">${escapeHTML(formatDate(item.createdAt))}</span>
-        </div>
-      </div>
-
-      <p class="saved-summary">
-        ${escapeHTML(summary)}<br>
-        ${item.ideas.length} idées sauvegardées
-      </p>
-
-      <div class="saved-actions">
-        <button
-          class="button button-secondary"
-          type="button"
-          data-action="load-save"
-          data-id="${escapeHTML(item.id)}"
-        >Charger</button>
-
-        <button
-          class="button button-secondary"
-          type="button"
-          data-action="copy-save"
-          data-id="${escapeHTML(item.id)}"
-        >Copier le prompt</button>
-
-        <button
-          class="button button-secondary delete-button"
-          type="button"
-          data-action="delete-save"
-          data-id="${escapeHTML(item.id)}"
-        >Supprimer</button>
-      </div>
-    `;
-
-    savedList.appendChild(card);
-  });
-}
-
-function saveCurrentIdeas() {
-  if (!currentBrief || !currentPrompt || !currentIdeas.length) {
-    setStatus(ideasStatus, "Génère d'abord un prompt et des idées.", true);
-    return;
+  // Saved prompt library.
+  function renderSaved() {
+    const list = $("#savedList");
+    if (!list) return;
+    const query = ($("#savedSearch")?.value || "").trim().toLowerCase();
+    const all = getSaved();
+    const items = all.filter(item => `${item.title} ${item.platform} ${item.prompt}`.toLowerCase().includes(query));
+    const count = $("#savedCount");
+    if (count) count.textContent = `${items.length} création${items.length > 1 ? "s" : ""}`;
+    if (!items.length) {
+      list.innerHTML = all.length ? `<div class="empty-library"><span>⌕</span><h2>Aucun résultat pour cette recherche.</h2><p>Essaie un autre mot-clé.</p></div>` : `<div class="empty-library"><span>▣</span><h2>Ta bibliothèque est prête à accueillir tes idées.</h2><p>Génère un prompt puis clique sur « Enregistrer » pour le retrouver ici.</p><a class="button button-primary" href="generateur.html">Créer mon premier prompt →</a></div>`;
+      return;
+    }
+    list.innerHTML = items.map(item => `<article class="saved-item"><div class="saved-item-icon">✧</div><div class="saved-item-main"><div class="saved-meta">${escapeHTML(item.platform || "Prompt")} · ${new Date(item.createdAt).toLocaleDateString("fr-FR")}</div><h3>${escapeHTML(item.title || "Prompt sans titre")}</h3><p>${escapeHTML(item.prompt)}</p><div class="saved-actions"><button class="small-action" data-copy-saved="${escapeHTML(item.id)}">Copier</button><button class="small-action" data-download-saved="${escapeHTML(item.id)}">Télécharger TXT</button><button class="small-action danger" data-delete-saved="${escapeHTML(item.id)}">Supprimer</button></div></div></article>`).join("");
+    $$("[data-copy-saved]", list).forEach(btn => btn.addEventListener("click", () => { const item = getSaved().find(x => x.id === btn.dataset.copySaved); if (item) copyText(item.prompt); }));
+    $$("[data-download-saved]", list).forEach(btn => btn.addEventListener("click", () => { const item = getSaved().find(x => x.id === btn.dataset.downloadSaved); if (item) downloadText("creatorkit-" + (item.title || "prompt").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40) + ".txt", item.prompt); }));
+    $$("[data-delete-saved]", list).forEach(btn => btn.addEventListener("click", () => {
+      setSaved(getSaved().filter(x => x.id !== btn.dataset.deleteSaved)); renderSaved(); toast("Création supprimée.");
+    }));
   }
+  $("#savedSearch")?.addEventListener("input", renderSaved);
+  renderSaved();
 
-  const items = readSavedItems();
-
-  const entry = {
-    id: makeId(),
-    createdAt: new Date().toISOString(),
-    ...currentBrief,
-    prompt: currentPrompt,
-    ideas: currentIdeas
-  };
-
-  items.unshift(entry);
-
-  if (!writeSavedItems(items.slice(0, MAX_SAVES))) {
-    return;
-  }
-
-  renderSavedItems();
-  setStatus(ideasStatus, "Prompt et idées sauvegardés sur cet appareil.");
-  setStatus(savedStatus, "Nouvelle sauvegarde ajoutée.");
-}
-
-function loadSavedItem(id) {
-  const item = readSavedItems().find((entry) => entry.id === id);
-
-  if (!item) {
-    setStatus(savedStatus, "Cette sauvegarde est introuvable.", true);
-    renderSavedItems();
-    return;
-  }
-
-  topicInput.value = item.topic || "";
-  platformInput.value = item.platform || "TikTok";
-  goalInput.value = item.goal || "Trouver des idées originales";
-  formatInput.value = item.format || "Script vidéo";
-  toneInput.value = item.tone || "Dynamique";
-  audienceInput.value = item.audience || "Intermédiaire";
-  durationInput.value = item.duration || "30 secondes environ";
-  extraInput.value = item.extra || "";
-
-  currentBrief = getBrief();
-  currentPrompt = item.prompt;
-  currentIdeas = item.ideas;
-
-  promptOutput.value = currentPrompt;
-  updatePromptWordCount();
-  renderIdeas();
-
-  setStatus(savedStatus, "Sauvegarde chargée.");
-  setStatus(copyStatus, "");
-  setStatus(ideasStatus, "");
-
-  document.getElementById("generator").scrollIntoView({
-    behavior: "smooth",
-    block: "start"
-  });
-}
-
-function deleteSavedItem(id) {
-  const items = readSavedItems();
-  const remaining = items.filter((item) => item.id !== id);
-
-  if (remaining.length === items.length) {
-    setStatus(savedStatus, "Cette sauvegarde est introuvable.", true);
-    return;
-  }
-
-  if (!writeSavedItems(remaining)) return;
-
-  renderSavedItems();
-  setStatus(savedStatus, "Sauvegarde supprimée.");
-}
-
-/* -------------------------------------------------------
-   6. COPIE ET EXPORT
-------------------------------------------------------- */
-
-async function copyText(text) {
-  if (!text) {
-    throw new Error("Aucun texte à copier.");
-  }
-
-  if (navigator.clipboard && window.isSecureContext) {
-    await navigator.clipboard.writeText(text);
-    return;
-  }
-
-  const temporary = document.createElement("textarea");
-  temporary.value = text;
-  temporary.setAttribute("readonly", "");
-  temporary.style.position = "fixed";
-  temporary.style.left = "-9999px";
-  temporary.style.top = "0";
-
-  document.body.appendChild(temporary);
-  temporary.select();
-  temporary.setSelectionRange(0, temporary.value.length);
-
-  let copied = false;
-
-  try {
-    copied = document.execCommand("copy");
-  } finally {
-    temporary.remove();
-  }
-
-  if (!copied) {
-    throw new Error("La copie automatique n'est pas disponible dans ce navigateur.");
-  }
-}
-
-async function handleCopy(text, statusElement, successMessage) {
-  try {
-    await copyText(text);
-    setStatus(statusElement, successMessage);
-  } catch (error) {
-    console.error(error);
-    setStatus(
-      statusElement,
-      "Copie impossible. Sélectionne le texte et copie-le manuellement.",
-      true
-    );
-  }
-}
-
-function downloadTextFile() {
-  const content = allIdeasToText();
-  const blob = new Blob(
-    ["\uFEFF", content],
-    { type: "text/plain;charset=utf-8" }
-  );
-
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.download = "creatorkit-" + slugify(currentBrief?.topic || "idees") + ".txt";
-
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-
-  URL.revokeObjectURL(url);
-
-  setStatus(ideasStatus, "Export texte préparé.");
-}
-
-function updatePromptWordCount() {
-  const count = countWords(promptOutput.value);
-  promptWordCount.textContent = pluralize(count, "mot");
-}
-
-/* -------------------------------------------------------
-   7. GÉNÉRATION ET ÉVÉNEMENTS
-------------------------------------------------------- */
-
-function generateContent() {
-  const brief = getBrief();
-
-  if (!brief.topic) {
-    topicInput.setCustomValidity("Entre un sujet pour générer ton contenu.");
-    topicInput.reportValidity();
-    topicInput.setCustomValidity("");
-    topicInput.focus();
-    return false;
-  }
-
-  currentBrief = brief;
-  currentPrompt = buildPrompt(brief);
-  currentIdeas = buildIdeas(brief);
-
-  promptOutput.value = currentPrompt;
-  updatePromptWordCount();
-  renderIdeas();
-
-  setStatus(copyStatus, "");
-  setStatus(ideasStatus, "Prompt et " + currentIdeas.length + " idées préparés.");
-  setStatus(savedStatus, "");
-
-  return true;
-}
-
-form.addEventListener("submit", (event) => {
-  event.preventDefault();
-
-  if (generateContent()) {
-    setStatus(copyStatus, "Ton prompt a été actualisé.");
-  }
-});
-
-regenerateBtn.addEventListener("click", () => {
-  generateContent();
-});
-
-copyPromptBtn.addEventListener("click", () => {
-  handleCopy(
-    currentPrompt,
-    copyStatus,
-    "Prompt copié. Tu peux maintenant le coller dans ton assistant IA."
-  );
-});
-
-copyAllBtn.addEventListener("click", () => {
-  handleCopy(
-    allIdeasToText(),
-    ideasStatus,
-    "Le prompt et toutes les idées ont été copiés."
-  );
-});
-
-downloadBtn.addEventListener("click", downloadTextFile);
-saveBtn.addEventListener("click", saveCurrentIdeas);
-
-ideasGrid.addEventListener("click", async (event) => {
-  const button = event.target.closest("button[data-action]");
-
-  if (!button) return;
-
-  const id = button.dataset.id;
-  const action = button.dataset.action;
-  const idea = currentIdeas.find((item) => item.id === id);
-
-  if (!idea) return;
-
-  if (action === "copy-idea") {
-    await handleCopy(
-      ideaToText(idea),
-      ideasStatus,
-      "Idée copiée."
-    );
-  }
-
-  if (action === "prompt-idea") {
-    const specificPrompt = [
-      "Tu es un assistant de conception de contenu.",
-      "",
-      "Développe cette idée en respectant mon brief.",
-      "Sujet : " + currentBrief.topic,
-      "Plateforme : " + currentBrief.platform,
-      "Objectif : " + currentBrief.goal,
-      "Format : " + currentBrief.format,
-      "Ton : " + currentBrief.tone,
-      "Public : " + currentBrief.audience,
-      "Durée ou longueur : " + currentBrief.duration,
-      "",
-      "IDÉE À DÉVELOPPER",
-      ideaToText(idea),
-      "",
-      "CONSIGNES",
-      getPlatformGuidance(currentBrief.platform),
-      getFormatInstructions(currentBrief.format),
-      getToneInstructions(currentBrief.tone),
-      getAudienceInstructions(currentBrief.audience),
-      currentBrief.extra ? "Précisions : " + currentBrief.extra : "",
-      "",
-      "Produis une version concrète, structurée et prête à être retravaillée."
-    ].filter(Boolean).join("\n");
-
-    currentPrompt = specificPrompt;
-    promptOutput.value = specificPrompt;
-    updatePromptWordCount();
-
-    setStatus(copyStatus, "Prompt spécifique à cette idée créé.");
-    document.getElementById("generator").scrollIntoView({
-      behavior: "smooth",
-      block: "start"
+  // Demo-only plan picker.
+  function getPlan() { try { return localStorage.getItem(PLAN_KEY) || "Free"; } catch { return "Free"; } }
+  function setPlan(plan) { try { localStorage.setItem(PLAN_KEY, plan); } catch {} }
+  function renderPlan() {
+    const current = getPlan();
+    const heading = $("#currentPlan"), message = $("#planMessage");
+    if (heading) heading.textContent = `Offre sélectionnée : ${current}`;
+    if (message) message.textContent = "Ce choix est enregistré localement pour la démonstration. Aucun paiement n'est effectué.";
+    $$("[data-plan]").forEach(btn => {
+      const selected = btn.dataset.plan === current;
+      btn.textContent = selected ? `✓ Offre actuelle : ${current}` : `Choisir ${btn.dataset.plan}`;
+      btn.classList.toggle("button-primary", selected || btn.dataset.plan === "Creator");
+      btn.classList.toggle("button-soft", !(selected || btn.dataset.plan === "Creator"));
     });
   }
-});
+  $$("[data-plan]").forEach(btn => btn.addEventListener("click", () => { setPlan(btn.dataset.plan); renderPlan(); toast(`Offre de démonstration sélectionnée : ${btn.dataset.plan}`); }));
+  renderPlan();
 
-savedList.addEventListener("click", (event) => {
-  const button = event.target.closest("button[data-action]");
-
-  if (!button) return;
-
-  const { action, id } = button.dataset;
-  const item = readSavedItems().find((entry) => entry.id === id);
-
-  if (action === "load-save") {
-    loadSavedItem(id);
+  // Original ambient music generated with Web Audio API. No external song or copyrighted recording.
+  let audioContext = null, masterGain = null, musicPlaying = false, musicTimer = null, noteIndex = 0;
+  const musicNotes = [261.63, 329.63, 392.00, 493.88, 392.00, 329.63, 293.66, 349.23, 440.00, 523.25, 440.00, 349.23];
+  function playNote(freq, startAt, duration, volume) {
+    if (!audioContext || !masterGain) return;
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const filter = audioContext.createBiquadFilter();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, startAt);
+    filter.type = "lowpass"; filter.frequency.setValueAtTime(1200, startAt);
+    gain.gain.setValueAtTime(0.0001, startAt);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), startAt + 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+    osc.connect(filter); filter.connect(gain); gain.connect(masterGain);
+    osc.start(startAt); osc.stop(startAt + duration + 0.04);
   }
-
-  if (action === "delete-save") {
-    deleteSavedItem(id);
+  function scheduleMusic() {
+    if (!musicPlaying || !audioContext) return;
+    const now = audioContext.currentTime;
+    const freq = musicNotes[noteIndex % musicNotes.length];
+    playNote(freq, now + 0.02, 1.5, 0.11);
+    if (noteIndex % 3 === 0) playNote(musicNotes[(noteIndex + 3) % musicNotes.length] / 2, now + 0.02, 2.2, 0.045);
+    noteIndex++;
   }
-
-  if (action === "copy-save" && item) {
-    handleCopy(
-      item.prompt,
-      savedStatus,
-      "Prompt de la sauvegarde copié."
-    );
+  function updateMusicUI() {
+    const toggle = $("#musicToggle"), play = $("#musicPlay"), state = $("#musicState");
+    toggle?.classList.toggle("playing", musicPlaying);
+    if (toggle) toggle.setAttribute("aria-label", musicPlaying ? "Mettre la musique en pause" : "Ouvrir le lecteur de musique");
+    if (play) { play.textContent = musicPlaying ? "Ⅱ" : "▶"; play.setAttribute("aria-label", musicPlaying ? "Mettre en pause" : "Lancer la musique"); }
+    if (state) state.textContent = musicPlaying ? "Musique en cours" : "Musique en pause";
   }
-});
-
-/* -------------------------------------------------------
-   8. INITIALISATION
-------------------------------------------------------- */
-
-generateContent();
-renderSavedItems();
+  async function startMusic() {
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) { toast("La musique n'est pas prise en charge par ce navigateur."); return; }
+      if (!audioContext) {
+        audioContext = new AudioContextClass();
+        masterGain = audioContext.createGain();
+        masterGain.gain.value = (Number($("#musicVolume")?.value ?? 25) / 100) * 0.5;
+        masterGain.connect(audioContext.destination);
+      }
+      await audioContext.resume();
+      if (musicPlaying) return;
+      musicPlaying = true;
+      scheduleMusic();
+      musicTimer = window.setInterval(scheduleMusic, 850);
+      updateMusicUI();
+    } catch { toast("Impossible de démarrer le son. Vérifie les réglages de ton navigateur."); }
+  }
+  function stopMusic() {
+    musicPlaying = false;
+    if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+    if (masterGain && audioContext) {
+      const now = audioContext.currentTime;
+      masterGain.gain.cancelScheduledValues(now);
+      masterGain.gain.setTargetAtTime(0, now, 0.04);
+      setTimeout(() => {
+        if (!musicPlaying && masterGain && audioContext) {
+          masterGain.gain.setTargetAtTime((Number($("#musicVolume")?.value ?? 25) / 100) * 0.5, audioContext.currentTime, 0.05);
+        }
+      }, 180);
+    }
+    updateMusicUI();
+  }
+  $("#musicToggle")?.addEventListener("click", () => {
+    const panel = $("#musicPanel");
+    if (panel) { panel.hidden = !panel.hidden; document.body.classList.toggle("music-open", !panel.hidden); }
+    if (musicPlaying) stopMusic();
+  });
+  $("#musicClose")?.addEventListener("click", () => { const panel = $("#musicPanel"); if (panel) panel.hidden = true; document.body.classList.remove("music-open"); });
+  $("#musicPlay")?.addEventListener("click", () => musicPlaying ? stopMusic() : startMusic());
+  $("#musicVolume")?.addEventListener("input", event => {
+    const value = Number(event.target.value);
+    const label = $("#volumeValue"); if (label) label.textContent = `${value} %`;
+    if (masterGain && audioContext) masterGain.gain.setTargetAtTime(value / 100 * 0.5, audioContext.currentTime, 0.04);
+  });
+  updateMusicUI();
+})();
