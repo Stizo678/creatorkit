@@ -1,308 +1,66 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#7657e8">
-  <meta name="description" content="CreatorKit aide les créateurs à trouver des idées, construire des prompts personnalisés et organiser leur contenu.">
-  <title>CreatorKit — Ton copilote de contenu</title>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#7565d9">
+  <title>CreatorKit — Crée avec inspiration</title>
   <link rel="stylesheet" href="style.css">
   <script src="script.js" defer></script>
 </head>
-
-<body>
-  <header class="topbar">
-    <a class="brand" href="#" aria-label="CreatorKit, accueil">
-      <span class="brand-icon">C</span>
-      <span>Creator<span class="brand-light">Kit</span></span>
+<body data-page="home">
+  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="CreatorKit, accueil">
+      <span class="brand-mark"><svg viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a99bff"/><stop offset="1" stop-color="#6754d8"/></linearGradient></defs><rect x="2" y="2" width="44" height="44" rx="15" fill="url(#lg)"/><path d="M26 7 12 26h10l-1 15 15-21H25z" fill="white"/><circle cx="35" cy="11" r="3" fill="#f9d878"/></svg></span>
+      <span>Creator<span class="brand-light">Kit</span><small>CREATE SOMETHING GREAT</small></span>
     </a>
-
-    <nav class="nav-links">
-      <a href="#generator">Générateur</a>
-      <a href="#ideas">Mes idées</a>
-      <a href="#saved">Sauvegardes</a>
+    <button class="mobile-menu" id="mobileMenu" aria-label="Ouvrir le menu"><span></span><span></span><span></span></button>
+    <nav class="main-nav" id="mainNav" aria-label="Navigation principale">
+      <a class="nav-link active" href="index.html">Accueil</a><a class="nav-link" href="generateur.html">Générateur</a><a class="nav-link" href="idees.html">Idées</a><a class="nav-link" href="creations.html">Mes créations</a><a class="nav-link" href="abonnement.html">Offres</a>
     </nav>
-
-    <span class="free-badge">GRATUIT</span>
+    <a class="header-cta" href="generateur.html">Commencer <span>↗</span></a>
   </header>
-
   <main>
-    <section class="hero">
-      <div class="hero-content">
-        <span class="eyebrow"><span class="status-dot"></span> TON STUDIO DE CRÉATION</span>
-        <h1>Moins de pages blanches.<br><span>Plus d'idées à publier.</span></h1>
-        <p>
-          Transforme un simple sujet en prompt personnalisé et en idées
-          de contenu prêtes à développer.
-        </p>
-        <a class="button button-primary hero-button" href="#generator">
-          Créer mon contenu <span aria-hidden="true">↗</span>
-        </a>
-        <p class="hero-note">Gratuit · Sans compte · Sans clé API</p>
+    <section class="hero wrap">
+      <div class="hero-copy reveal">
+        <div class="eyebrow"><span class="live-dot"></span> TON STUDIO CRÉATIF, PROPULSÉ PAR TES IDÉES</div>
+        <h1>Les bonnes idées.<br><span class="gradient-text">Au bon moment.</span></h1>
+        <p class="hero-subtitle">Transforme tes inspirations en prompts, concepts et contenus prêts à développer. Un espace clair pour créer sans te disperser.</p>
+        <div class="hero-actions"><a class="button button-primary" href="generateur.html">✦ Créer mon premier prompt <span>→</span></a><a class="button button-soft" href="idees.html">Explorer les idées</a></div>
+        <div class="social-proof"><div class="avatar-stack"><span>✦</span><span>✷</span><span>✧</span></div><div><strong>Ton prochain contenu commence ici.</strong><small>Simple, organisé et pensé pour les créateurs.</small></div></div>
       </div>
-
-      <div class="hero-art" aria-hidden="true">
-        <div class="art-glow"></div>
-        <div class="floating-card floating-top">
-          <span class="mini-icon">✦</span>
-          <div>
-            <strong>Nouvelle idée</strong>
-            <small>Un angle inattendu</small>
-          </div>
+      <div class="hero-art reveal delay-1">
+        <div class="orbit orbit-a"></div><div class="orbit orbit-b"></div>
+        <div class="floating-card mini-card card-top"><span class="mini-icon">✦</span><div><strong>Nouvelle idée</strong><small>Storytelling · 30 sec</small></div><span class="sparkle">✧</span></div>
+        <div class="dashboard-card">
+          <div class="dash-top"><div><span class="tiny-label">ESPACE CRÉATIF</span><h3>Ton prochain post</h3></div><span class="status-pill"><i></i> En préparation</span></div>
+          <div class="fake-image"><div class="sun"></div><div class="mountain mountain-back"></div><div class="mountain mountain-front"></div><div class="image-label">YOUR NEXT BIG IDEA</div></div>
+          <div class="dash-meta"><div><span class="round-icon">✦</span><div><strong>Concept créatif</strong><small>Instagram · Reel</small></div></div><span class="pill-lavender">Prêt à créer</span></div>
+          <div class="progress-track"><span></span></div>
         </div>
-
-        <div class="preview-card">
-          <div class="preview-header">
-            <span class="preview-dot"></span>
-            <span class="preview-dot"></span>
-            <span class="preview-dot"></span>
-            <span class="preview-label">CREATORKIT STUDIO</span>
-          </div>
-          <div class="preview-content">
-            <span class="preview-tag">SCRIPT VIDÉO</span>
-            <div class="preview-line wide"></div>
-            <div class="preview-line medium"></div>
-            <div class="preview-line short"></div>
-            <div class="preview-pill">Ton prochain contenu commence ici ✨</div>
-          </div>
-        </div>
-
-        <div class="floating-card floating-bottom">
-          <span class="mini-icon">↗</span>
-          <div>
-            <strong>À toi de créer</strong>
-            <small>Une idée à la fois</small>
-          </div>
-        </div>
+        <div class="floating-card mini-card card-bottom"><span class="check-icon">✓</span><div><strong>Prompt préparé</strong><small>Il ne manque que toi !</small></div></div>
+        <span class="decor-star star-one">✳</span><span class="decor-star star-two">✦</span>
       </div>
     </section>
-
-    <section class="workspace" id="generator">
-      <div class="section-heading">
-        <div>
-          <span class="eyebrow">01 — PERSONNALISATION</span>
-          <h2>Configure ton contenu</h2>
-          <p>Décris ton sujet et adapte les paramètres à ton audience.</p>
-        </div>
-        <span class="step-indicator">ÉTAPE 1 SUR 2</span>
-      </div>
-
-      <div class="workspace-grid">
-        <form id="generatorForm" class="panel settings-panel">
-          <div class="panel-heading">
-            <div class="panel-icon">✦</div>
-            <div>
-              <h3>Ton brief créatif</h3>
-              <p>Quelques détails pour guider le résultat.</p>
-            </div>
-          </div>
-
-          <div class="field">
-            <label for="topic">Quel est ton sujet ? <span class="required">*</span></label>
-            <input
-              id="topic"
-              name="topic"
-              type="text"
-              maxlength="180"
-              placeholder="Ex. : apprendre à mieux monter ses vidéos"
-              value="Le montage vidéo pour les créateurs"
-              required
-            >
-            <small class="field-hint">Un thème, une passion, un produit ou un problème à résoudre.</small>
-          </div>
-
-          <div class="field">
-            <label for="platform">Plateforme</label>
-            <select id="platform" name="platform">
-              <option value="TikTok" selected>TikTok</option>
-              <option value="Instagram">Instagram</option>
-              <option value="YouTube">YouTube</option>
-              <option value="LinkedIn">LinkedIn</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="goal">Objectif</label>
-            <select id="goal" name="goal">
-              <option value="Trouver des idées originales" selected>Trouver des idées originales</option>
-              <option value="Éduquer mon audience">Éduquer mon audience</option>
-              <option value="Divertir mon audience">Divertir mon audience</option>
-              <option value="Développer ma communauté">Développer ma communauté</option>
-              <option value="Présenter un produit ou service">Présenter un produit ou service</option>
-              <option value="Augmenter les interactions">Augmenter les interactions</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="format">Format du contenu</label>
-            <select id="format" name="format">
-              <option value="Script vidéo" selected>Script vidéo</option>
-              <option value="Liste d'idées">Liste d'idées</option>
-              <option value="Tutoriel">Tutoriel</option>
-              <option value="Storytelling">Storytelling</option>
-              <option value="Carrousel">Carrousel</option>
-              <option value="Publication écrite">Publication écrite</option>
-            </select>
-          </div>
-
-          <div class="field-row">
-            <div class="field">
-              <label for="tone">Ton</label>
-              <select id="tone" name="tone">
-                <option value="Dynamique" selected>Dynamique</option>
-                <option value="Pédagogique">Pédagogique</option>
-                <option value="Humoristique">Humoristique</option>
-                <option value="Professionnel">Professionnel</option>
-                <option value="Inspirant">Inspirant</option>
-                <option value="Décontracté">Décontracté</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="audience">Public</label>
-              <select id="audience" name="audience">
-                <option value="Débutant">Débutant</option>
-                <option value="Intermédiaire" selected>Intermédiaire</option>
-                <option value="Avancé">Avancé</option>
-                <option value="Grand public">Grand public</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field">
-            <label for="duration">Durée ou longueur souhaitée</label>
-            <select id="duration" name="duration">
-              <option value="30 secondes environ" selected>30 secondes environ</option>
-              <option value="60 secondes environ">60 secondes environ</option>
-              <option value="90 secondes environ">90 secondes environ</option>
-              <option value="Format court, longueur libre">Format court, longueur libre</option>
-              <option value="Format détaillé">Format détaillé</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="extra">Précisions supplémentaires <span class="optional">FACULTATIF</span></label>
-            <textarea
-              id="extra"
-              name="extra"
-              rows="3"
-              maxlength="500"
-              placeholder="Ex. : éviter les conseils trop classiques, inclure un exemple concret..."
-            ></textarea>
-          </div>
-
-          <button class="button button-primary button-full" type="submit">
-            Générer mon prompt <span aria-hidden="true">✦</span>
-          </button>
-          <p class="form-footnote">Tes paramètres servent à construire un prompt et des idées à partir de modèles locaux.</p>
-        </form>
-
-        <div class="right-column">
-          <section class="panel prompt-panel" aria-labelledby="promptTitle">
-            <div class="panel-heading prompt-heading">
-              <div>
-                <span class="eyebrow">02 — TON PROMPT</span>
-                <h3 id="promptTitle">Ton brief personnalisé</h3>
-              </div>
-              <span class="result-badge">PRÊT À COPIER</span>
-            </div>
-
-            <p class="panel-description">
-              Copie ce prompt dans l'assistant IA de ton choix pour lui demander de développer le contenu.
-            </p>
-
-            <label class="sr-only" for="promptOutput">Prompt généré</label>
-            <textarea id="promptOutput" class="prompt-output" rows="13" readonly aria-live="polite"></textarea>
-
-            <div class="prompt-meta">
-              <span id="promptWordCount">0 mot</span>
-              <span>Prompt personnalisable</span>
-            </div>
-
-            <div class="button-row">
-              <button class="button button-primary" id="copyPromptBtn" type="button">
-                <span aria-hidden="true">▣</span> Copier le prompt
-              </button>
-              <button class="button button-secondary" id="regenerateBtn" type="button">
-                ↻ Actualiser
-              </button>
-            </div>
-
-            <p id="copyStatus" class="status-message" role="status" aria-live="polite"></p>
-          </section>
-
-          <section class="tip-card">
-            <span class="tip-icon">💡</span>
-            <div>
-              <strong>Astuce de créateur</strong>
-              <p>Un sujet précis donne généralement des idées plus faciles à transformer en contenu. Ajoute un exemple ou un problème concret dans ton brief.</p>
-            </div>
-          </section>
-        </div>
+    <section class="stats-strip wrap reveal"><div><strong>01</strong><span>Choisis ton objectif</span></div><div><strong>02</strong><span>Génère tes idées</span></div><div><strong>03</strong><span>Sauvegarde tes favoris</span></div><div><strong>04</strong><span>Passe à la création</span></div></section>
+    <section class="section wrap">
+      <div class="section-heading reveal"><div><div class="eyebrow">UN STUDIO, PLUSIEURS OUTILS</div><h2>Tout ce qu'il faut pour <span class="gradient-text">créer mieux.</span></h2></div><p>Chaque outil a sa place. Tu sais où aller, quoi faire et où retrouver ton travail.</p></div>
+      <div class="feature-grid">
+        <a class="feature-card reveal" href="generateur.html"><span class="feature-icon purple">✧</span><span class="feature-arrow">↗</span><h3>Générateur de prompts</h3><p>Prépare un brief précis selon ton réseau, ton public et ton style.</p><span class="feature-link">Créer un prompt <b>→</b></span></a>
+        <a class="feature-card reveal delay-1" href="idees.html"><span class="feature-icon peach">✷</span><span class="feature-arrow">↗</span><h3>Idées de contenu</h3><p>Débloque ton inspiration avec des angles et concepts faciles à adapter.</p><span class="feature-link">Trouver une idée <b>→</b></span></a>
+        <a class="feature-card reveal delay-2" href="creations.html"><span class="feature-icon mint">▣</span><span class="feature-arrow">↗</span><h3>Bibliothèque personnelle</h3><p>Garde tes prompts préférés au même endroit pour les retrouver vite.</p><span class="feature-link">Voir mes créations <b>→</b></span></a>
       </div>
     </section>
-
-    <section class="ideas-section" id="ideas">
-      <div class="section-heading">
-        <div>
-          <span class="eyebrow">03 — INSPIRATION</span>
-          <h2>Ta boîte à idées</h2>
-          <p>Des pistes de contenu basées sur ton sujet et tes choix.</p>
-        </div>
-        <span id="ideasCount" class="step-indicator">7 IDÉES</span>
-      </div>
-
-      <div class="ideas-toolbar">
-        <p>Choisis une idée, copie-la ou exporte toute ta sélection.</p>
-        <div class="button-row toolbar-actions">
-          <button class="button button-secondary" id="copyAllBtn" type="button">Copier toutes les idées</button>
-          <button class="button button-secondary" id="downloadBtn" type="button">↓ Exporter en TXT</button>
-          <button class="button button-primary" id="saveBtn" type="button">♡ Sauvegarder</button>
-        </div>
-      </div>
-
-      <div id="ideasGrid" class="ideas-grid" aria-live="polite"></div>
-      <p id="ideasStatus" class="status-message" role="status" aria-live="polite"></p>
-    </section>
-
-    <section class="saved-section" id="saved">
-      <div class="section-heading">
-        <div>
-          <span class="eyebrow">04 — TON ESPACE</span>
-          <h2>Mes sauvegardes</h2>
-          <p>Retrouve les idées que tu as conservées sur cet appareil.</p>
-        </div>
-        <span id="savedCount" class="step-indicator">0 SAUVEGARDE</span>
-      </div>
-
-      <div id="savedList" class="saved-list"></div>
-      <p id="savedStatus" class="status-message" role="status" aria-live="polite"></p>
-
-      <p class="privacy-note">
-        Les sauvegardes sont stockées dans le navigateur de cet appareil.
-        Elles ne sont pas synchronisées avec un compte et peuvent disparaître si les données du navigateur sont effacées.
-      </p>
-    </section>
-
-    <section class="bottom-cta">
-      <div>
-        <span class="eyebrow">TON PROCHAIN CONTENU COMMENCE ICI</span>
-        <h2>Une bonne idée mérite d'être publiée.</h2>
-        <p>Teste différents sujets, affine ton prompt et construis ta bibliothèque d'idées.</p>
-      </div>
-      <a class="button button-light" href="#generator">Créer une nouvelle idée ↑</a>
-    </section>
+    <section class="cta-band wrap reveal"><div class="cta-orb">✦</div><div><div class="eyebrow">À TOI DE JOUER</div><h2>Une idée en tête ? Fais-en quelque chose.</h2><p>Commence gratuitement, puis organise ton processus créatif à ton rythme.</p></div><a class="button button-white" href="generateur.html">Ouvrir le studio <span>→</span></a></section>
   </main>
-
-  <footer class="footer">
-    <a class="brand footer-brand" href="#">
-      <span class="brand-icon">C</span>
-      <span>Creator<span class="brand-light">Kit</span></span>
-    </a>
-    <p>Un outil simple pour mieux organiser ta créativité.</p>
-    <p class="footer-disclaimer">Les résultats sont construits à partir de modèles JavaScript, sans génération par un modèle d'IA intégré.</p>
-    <span>© <span id="currentYear"></span> CreatorKit</span>
-  </footer>
-</body>
-</html>
+  <footer class="site-footer wrap"><a class="brand brand-small" href="index.html"><span class="brand-mark"><svg viewBox="0 0 48 48"><rect x="2" y="2" width="44" height="44" rx="15" fill="#7565d9"/><path d="M26 7 12 26h10l-1 15 15-21H25z" fill="white"/></svg></span><span>Creator<span class="brand-light">Kit</span></span></a><span>Un espace pour faire grandir tes idées.</span><span>© <span data-year></span> CreatorKit</span></footer>
+  <button class="music-fab" id="musicToggle" aria-label="Activer la musique" title="Musique d'ambiance"><span class="music-bars"><i></i><i></i><i></i><i></i></span><span class="music-fab-label">Musique</span></button>
+  <aside class="music-panel" id="musicPanel" aria-label="Lecteur de musique" hidden>
+    <div class="music-panel-head"><div class="music-note">♫</div><div><strong>Focus mode</strong><small>Ambiance originale · synthé doux</small></div><button class="icon-button" id="musicClose" aria-label="Fermer le lecteur">×</button></div>
+    <p>Une petite ambiance sonore générée directement dans ton navigateur.</p>
+    <div class="music-controls"><button class="play-button" id="musicPlay" aria-label="Lancer la musique">▶</button><div class="music-track"><strong id="musicState">Musique en pause</strong><small>Lo-fi électronique · boucle</small></div></div>
+    <label class="volume-label" for="musicVolume">Volume <span id="volumeValue">25 %</span></label><input id="musicVolume" type="range" min="0" max="100" value="25">
+    <small class="music-hint">Le son démarre uniquement quand tu appuies sur lecture.</small>
+  </aside>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body></html>
