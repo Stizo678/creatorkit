@@ -1,0 +1,106 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Prépare ton calendrier de contenu en quelques secondes avec CreatorKit.">
+  <title>CreatorKit — Assistant de contenu</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="logo" href="#" aria-label="CreatorKit accueil">
+      <span class="logo-icon">C</span>
+      CreatorKit
+    </a>
+    <span class="version">BÊTA GRATUITE</span>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <span class="eyebrow">TON STUDIO DE CONTENU</span>
+      <h1>Des idées. Du contenu.<br><span>Plus de régularité.</span></h1>
+      <p>Prépare une semaine de publications à partir de ton sujet.
+         Simple, rapide et gratuit.</p>
+    </section>
+
+    <section class="workspace">
+      <form id="content-form" class="panel">
+        <div class="section-heading">
+          <span class="step">01</span>
+          <div>
+            <h2>Configure ton contenu</h2>
+            <p>Personnalise les idées pour ton audience.</p>
+          </div>
+        </div>
+
+        <label for="topic">Quel est ton sujet ?</label>
+        <input id="topic" name="topic" type="text"
+          placeholder="Ex. : cuisine facile, fitness, technologie..."
+          maxlength="100" required>
+
+        <label for="platform">Plateforme</label>
+        <select id="platform" name="platform">
+          <option value="TikTok">TikTok</option>
+          <option value="Instagram">Instagram</option>
+          <option value="YouTube">YouTube</option>
+          <option value="LinkedIn">LinkedIn</option>
+        </select>
+
+        <label for="audience">Ton public cible</label>
+        <input id="audience" name="audience" type="text"
+          placeholder="Ex. : débutants, étudiants, entrepreneurs..."
+          maxlength="100" value="Débutants">
+
+        <label for="tone">Quel ton souhaites-tu ?</label>
+        <select id="tone" name="tone">
+          <option value="accessible">Simple et accessible</option>
+          <option value="dynamique">Dynamique et énergique</option>
+          <option value="professionnel">Professionnel</option>
+          <option value="humoristique">Humoristique</option>
+        </select>
+
+        <button class="primary-button" type="submit">
+          ✦ Générer mes 7 idées
+        </button>
+        <p class="small-note">Gratuit · Sans compte · Sans clé API</p>
+      </form>
+
+      <section class="results-panel" aria-live="polite">
+        <div class="section-heading">
+          <span class="step">02</span>
+          <div>
+            <h2>Ton calendrier</h2>
+            <p id="result-subtitle">Tes idées apparaîtront ici.</p>
+          </div>
+        </div>
+
+        <div id="empty-state" class="empty-state">
+          <div class="empty-icon">✎</div>
+          <h3>Tout commence par une idée</h3>
+          <p>Entre un sujet à gauche pour créer ton premier calendrier.</p>
+        </div>
+
+        <div id="results" class="results" hidden></div>
+
+        <div id="result-actions" class="result-actions" hidden>
+          <button id="copy-button" class="secondary-button" type="button">
+            Copier toutes les idées
+          </button>
+          <button id="download-button" class="secondary-button" type="button">
+            Télécharger en TXT
+          </button>
+          <p id="status" class="status" role="status"></p>
+        </div>
+      </section>
+    </section>
+
+    <footer>
+      <p>CreatorKit © 2026 · Un prototype indépendant en cours de création.</p>
+      <p>Les suggestions sont des modèles à adapter à ta propre expérience.</p>
+    </footer>
+  </main>
+</body>
+</html>
